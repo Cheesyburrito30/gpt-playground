@@ -1,10 +1,13 @@
+import { NotAllowedIcon } from "@chakra-ui/icons";
 import {
   Button,
+  ButtonGroup,
   Flex,
   FormControl,
   FormLabel,
   Grid,
   GridItem,
+  IconButton,
   Textarea,
 } from "@chakra-ui/react";
 import { ChatOpenAI } from "langchain/chat_models/openai";
@@ -18,10 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 
 import { ChatGrid, CompletionSettings } from "./Components";
-
-export interface ChatFormData extends CreateChatCompletionRequest {
-  systemMessage: string;
-}
+import { ChatFormData } from "./types";
 
 const defaultValues: ChatFormData = {
   systemMessage: "you are a helpful assistant",
@@ -65,6 +65,7 @@ export const App = () => {
       },
     ],
   });
+  const controller = new AbortController();
 
   const onSubmit = async ({ systemMessage, ...data }: ChatFormData) => {
     setIsLoading(true);
@@ -101,11 +102,21 @@ export const App = () => {
           return new AIChatMessage(content);
         }
         return new HumanChatMessage(content);
-      })
+      }),
+      {
+        options: {
+          signal: controller.signal,
+        },
+      }
     );
     // const response = await openai.createChatCompletion(sanitizeValues(data));
     setIsLoading(false);
     setStreamedAIResponse("");
+  };
+
+  const abortChat = () => {
+    controller.abort();
+    setIsLoading(false);
   };
 
   const scrollToBottom = () => {
@@ -124,6 +135,7 @@ export const App = () => {
         role: fields[fields.length - 1].role,
         content: streamedAIResponse,
       });
+      scrollToBottom();
     }
   }, [streamedAIResponse, isLoading, update, fields]);
 
@@ -180,14 +192,25 @@ export const App = () => {
         >
           <ChatGrid fields={fields} remove={remove} append={append} />
           <Flex p={4}>
-            <Button
-              type="submit"
-              colorScheme="blue"
-              isDisabled={isLoading}
-              isLoading={isLoading}
-            >
-              Submit
-            </Button>
+            <ButtonGroup>
+              <Button
+                type="submit"
+                colorScheme="blue"
+                isDisabled={isLoading}
+                isLoading={isLoading}
+              >
+                Submit
+              </Button>
+              {isLoading && (
+                <IconButton
+                  aria-label="cancel request"
+                  icon={<NotAllowedIcon />}
+                  onClick={abortChat}
+                  variant="ghost"
+                  colorScheme="red"
+                />
+              )}
+            </ButtonGroup>
           </Flex>
         </GridItem>
         <GridItem

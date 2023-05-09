@@ -21,7 +21,7 @@ import {
   useFormContext,
 } from "react-hook-form";
 
-import { ChatFormData } from "../App";
+import { ChatFormData } from "../types";
 import { ResizableTextarea } from "./ResizeableTextarea";
 
 export interface ChatGridProps {
