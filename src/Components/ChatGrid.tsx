@@ -1,4 +1,9 @@
-import { MinusIcon, NotAllowedIcon, PlusSquareIcon, RepeatClockIcon } from '@chakra-ui/icons';
+import {
+  MinusIcon,
+  NotAllowedIcon,
+  PlusSquareIcon,
+  RepeatClockIcon,
+} from '@chakra-ui/icons';
 import {
   Box,
   Button,
@@ -10,19 +15,25 @@ import {
   GridItem,
   IconButton,
   Select,
-  VisuallyHidden,
   VStack,
+  VisuallyHidden,
 } from '@chakra-ui/react';
-import { useCallback, useRef } from 'react';
-import { Controller, FieldArrayWithId, UseFieldArrayAppend, UseFieldArrayRemove, useFormContext } from 'react-hook-form';
+import { useCallback, useEffect, useRef } from 'react';
+import {
+  Controller,
+  FieldArrayWithId,
+  UseFieldArrayAppend,
+  UseFieldArrayRemove,
+  useFormContext,
+} from 'react-hook-form';
 
 import { ChatFormData } from '../types';
 import { MessageArea } from './MessageArea';
 
 export interface ChatGridProps {
-  fields: FieldArrayWithId<ChatFormData, "messages", "id">[];
+  fields: FieldArrayWithId<ChatFormData, 'messages', 'id'>[];
   remove: UseFieldArrayRemove;
-  append: UseFieldArrayAppend<ChatFormData, "messages">;
+  append: UseFieldArrayAppend<ChatFormData, 'messages'>;
   isLoading: boolean;
   abortChat: () => void;
 }
@@ -36,19 +47,44 @@ export const ChatGrid = ({
 }: ChatGridProps) => {
   const { register, control } = useFormContext<ChatFormData>();
   const controlsRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const removeChildMessages = useCallback(
     (index: number) => {
       const indicesToRemove = Array.from(
         { length: fields.length - index - 1 },
         (_, i) => i + index + 1
       );
+      console.log(indicesToRemove);
       remove(indicesToRemove);
     },
     [fields, remove]
   );
+
+  const scrollMessagesToBottom = useCallback(() => {
+    if (
+      scrollRef.current &&
+      // @ts-ignore
+      scrollRef.current.scrollTop + scrollRef.current.offsetHeight <
+        scrollRef.current.scrollHeight
+    ) {
+      console.log('wee');
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollMessagesToBottom();
+  }, [fields, scrollMessagesToBottom]);
+
   return (
     <>
-      <VStack spacing={0} w="full" h="calc(100vh - 136px)" overflowY="auto">
+      <VStack
+        spacing={0}
+        w="full"
+        h="calc(100vh - 136px)"
+        overflowY="auto"
+        ref={scrollRef}
+      >
         {fields.map((field, index) => (
           <Grid
             templateAreas={`
@@ -61,10 +97,10 @@ export const ChatGrid = ({
             borderBottom="solid 1px"
             borderBottomColor="gray.700"
             _hover={{
-              bg: "gray.700",
+              bg: 'gray.700',
             }}
             _focusWithin={{
-              bg: "gray.700",
+              bg: 'gray.700',
             }}
           >
             <Box gridArea="role" alignItems="start" display="flex" px={4}>
@@ -123,7 +159,7 @@ export const ChatGrid = ({
           justifyContent="start"
           variant="ghost"
           w="full"
-          onClick={() => append({ role: "user", content: "" })}
+          onClick={() => append({ role: 'user', content: '' })}
           leftIcon={<PlusSquareIcon />}
         >
           Add Message

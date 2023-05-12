@@ -32,14 +32,14 @@ import { ChatFormData } from '../types';
 import { ResizableTextarea } from './ResizeableTextarea';
 
 export interface MessageAreaProps {
-  field: FieldArrayWithId<ChatFormData, "messages", "id">;
+  field: FieldArrayWithId<ChatFormData, 'messages', 'id'>;
   index: number;
 }
 
 export const MessageArea = ({ field, index }: MessageAreaProps) => {
   const { register } = useFormContext<ChatFormData>();
 
-  if (field.role === "assistant") {
+  if (field.role === 'assistant') {
     return (
       <Box px={4}>
         <ReactMarkdown
@@ -108,7 +108,7 @@ const CodeBox: CodeComponent = ({
   children,
   ...props
 }) => {
-  const match = /language-(\w+)/.exec(className || "");
+  const match = /language-(\w+)/.exec(className || '');
   const { onCopy } = useClipboard(String(children));
   return !inline && match ? (
     <Box position="relative">
@@ -124,14 +124,20 @@ const CodeBox: CodeComponent = ({
       <SyntaxHighlighter
         {...props}
         showLineNumbers
-        children={String(children).replace(/\n$/, "")}
+        children={String(children).replace(/\n$/, '')}
         style={coldarkDark}
         language={match[1]}
         PreTag="div"
       />
     </Box>
   ) : (
-    <Code {...props} className={className} colorScheme="orange">
+    <Code
+      {...props}
+      className={className}
+      colorScheme="orange"
+      maxW="full"
+      overflowX="auto"
+    >
       {children}
     </Code>
   );
