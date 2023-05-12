@@ -1,27 +1,11 @@
-import { NotAllowedIcon } from "@chakra-ui/icons";
-import {
-  Button,
-  ButtonGroup,
-  Flex,
-  FormControl,
-  FormLabel,
-  Grid,
-  GridItem,
-  IconButton,
-  Textarea,
-} from "@chakra-ui/react";
-import { ChatOpenAI } from "langchain/chat_models/openai";
-import {
-  AIChatMessage,
-  HumanChatMessage,
-  SystemChatMessage,
-} from "langchain/schema";
-import { CreateChatCompletionRequest } from "openai";
-import { useEffect, useRef, useState } from "react";
-import { FormProvider, useFieldArray, useForm } from "react-hook-form";
+import { FormControl, FormLabel, Grid, GridItem, Textarea } from '@chakra-ui/react';
+import axios from 'axios';
+import { CreateChatCompletionRequest } from 'openai';
+import { useEffect, useRef, useState } from 'react';
+import { FormProvider, useFieldArray, useForm } from 'react-hook-form';
 
-import { ChatGrid, CompletionSettings } from "./Components";
-import { ChatFormData } from "./types";
+import { ChatGrid, CompletionSettings } from './Components';
+import { ChatFormData } from './types';
 
 const defaultValues: ChatFormData = {
   systemMessage: "you are a helpful assistant",
@@ -41,6 +25,7 @@ const defaultValues: ChatFormData = {
 };
 
 export const App = () => {
+  const eventSourceRef = useRef<EventSource | null>(null);
   const chatGridItemRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [streamedAIResponse, setStreamedAIResponse] = useState("");
@@ -49,43 +34,14 @@ export const App = () => {
   });
 
   const { control, handleSubmit } = formMethods;
-  const { fields, append, remove, update } = useFieldArray({
+  const { fields, append, prepend, remove, update } = useFieldArray({
     control,
     name: "messages",
   });
 
-  const chat = new ChatOpenAI({
-    openAIApiKey: process.env.REACT_APP_OPENAI_API_KEY,
-    streaming: true,
-    callbacks: [
-      {
-        handleLLMNewToken(token: string) {
-          setStreamedAIResponse((prev) => prev + token);
-        },
-      },
-    ],
-  });
-  const controller = new AbortController();
-
   const onSubmit = async ({ systemMessage, ...data }: ChatFormData) => {
     setIsLoading(true);
     data.messages.unshift({ role: "system", content: systemMessage });
-    const {
-      model,
-      messages,
-      temperature,
-      frequency_penalty,
-      presence_penalty,
-      top_p,
-      max_tokens,
-      n,
-    } = sanitizeValues(data);
-    chat.modelName = model;
-    chat.frequencyPenalty = frequency_penalty ?? 0;
-    chat.presencePenalty = presence_penalty ?? 0;
-    chat.topP = top_p ?? 1;
-    chat.maxTokens = max_tokens ?? 2086;
-    chat.temperature = temperature ?? 0.2;
     append(
       {
         role: "assistant",
@@ -93,49 +49,51 @@ export const App = () => {
       },
       { shouldFocus: false }
     );
-    await chat.call(
-      messages.map(({ role, content }) => {
-        if (role === "system") {
-          return new SystemChatMessage(content);
-        }
-        if (role === "assistant") {
-          return new AIChatMessage(content);
-        }
-        return new HumanChatMessage(content);
-      }),
-      {
-        options: {
-          signal: controller.signal,
-        },
-      }
-    );
+    const response = await axios.post("http://localhost:3001/chat", data);
     // const response = await openai.createChatCompletion(sanitizeValues(data));
+    update(fields.length, {
+      role: "assistant",
+      content: response.data.text,
+    });
     setIsLoading(false);
     setStreamedAIResponse("");
   };
 
-  const abortChat = () => {
-    controller.abort();
+  const onStreamedSubmit = async ({ systemMessage, ...data }: ChatFormData) => {
+    setIsLoading(true);
+    data.messages.unshift({ role: "system", content: systemMessage });
+    append(
+      {
+        role: "assistant",
+        content: "",
+      },
+      { shouldFocus: false }
+    );
+    const sse = new EventSource("http://localhost:3001/events");
+    sse.onmessage = (event) => {
+      setStreamedAIResponse((prev) => prev + JSON.parse(event.data));
+    };
+    const response = await axios.post("http://localhost:3001/trigger", data);
+    console.log("chat ended");
+    sse.close();
+    setStreamedAIResponse("");
     setIsLoading(false);
   };
 
-  const scrollToBottom = () => {
-    if (chatGridItemRef.current) {
-      chatGridItemRef.current.scrollTop = chatGridItemRef.current.scrollHeight;
-    }
+  const abortChat = async () => {
+    await axios.post("http://localhost:3001/abort");
+    setStreamedAIResponse("");
+    setIsLoading(false);
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [fields]);
-
-  useEffect(() => {
-    if (isLoading && streamedAIResponse.length > 0) {
+    if (streamedAIResponse === "end") {
+      setStreamedAIResponse("");
+    } else if (isLoading && streamedAIResponse.length > 0) {
       update(fields.length - 1, {
         role: fields[fields.length - 1].role,
         content: streamedAIResponse,
       });
-      scrollToBottom();
     }
   }, [streamedAIResponse, isLoading, update, fields]);
 
@@ -143,7 +101,7 @@ export const App = () => {
     <FormProvider {...formMethods}>
       <Grid
         as="form"
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onStreamedSubmit)}
         templateAreas={`
           "system chat settings"
         `}
@@ -185,33 +143,17 @@ export const App = () => {
         <GridItem
           area="chat"
           h="100%"
-          overflowY="auto"
           ref={chatGridItemRef}
           position="relative"
           bottom={0}
         >
-          <ChatGrid fields={fields} remove={remove} append={append} />
-          <Flex p={4}>
-            <ButtonGroup>
-              <Button
-                type="submit"
-                colorScheme="blue"
-                isDisabled={isLoading}
-                isLoading={isLoading}
-              >
-                Submit
-              </Button>
-              {isLoading && (
-                <IconButton
-                  aria-label="cancel request"
-                  icon={<NotAllowedIcon />}
-                  onClick={abortChat}
-                  variant="ghost"
-                  colorScheme="red"
-                />
-              )}
-            </ButtonGroup>
-          </Flex>
+          <ChatGrid
+            fields={fields}
+            remove={remove}
+            append={append}
+            isLoading={isLoading}
+            abortChat={abortChat}
+          />
         </GridItem>
         <GridItem
           area="settings"

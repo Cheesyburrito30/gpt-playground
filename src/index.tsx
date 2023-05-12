@@ -1,11 +1,11 @@
-import { ChakraProvider, ColorModeScript, extendTheme } from "@chakra-ui/react";
-import { Configuration, OpenAIApi } from "openai";
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { ChakraProvider, ColorModeScript, extendTheme } from '@chakra-ui/react';
+import { Configuration, OpenAIApi } from 'openai';
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 
-import { App } from "./App";
-import reportWebVitals from "./reportWebVitals";
+import { App } from './App';
+import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(
   document.getElementById("root") as HTMLElement
@@ -19,15 +19,15 @@ const theme = extendTheme({
   styles: {
     global: {
       html: {
-        height: "100%",
+        height: "100vh",
         width: "100%",
       },
       body: {
         bg: "gray.800",
-        height: "100%",
+        height: "100vh",
       },
       "#root": {
-        height: "100%",
+        height: "100vh",
       },
     },
   },

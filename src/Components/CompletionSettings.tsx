@@ -14,13 +14,13 @@ import {
   Select,
   useDisclosure,
   VStack,
-} from "@chakra-ui/react";
-import { useEffect, useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
+} from '@chakra-ui/react';
+import { useEffect, useState } from 'react';
+import { Controller, useFormContext } from 'react-hook-form';
 
-import { addPreset, deletePreset, getAllPresets, getPreset } from "../api/api";
-import { ChatFormData } from "../types";
-import { ControlledSlider } from "./ControlledSlider";
+import { addPreset, deletePreset, getAllPresets, getPreset } from '../api/api';
+import { ChatFormData } from '../types';
+import { ControlledSlider } from './ControlledSlider';
 
 interface PresetOption {
   id: number;
@@ -107,7 +107,7 @@ export const CompletionSettings = () => {
         name="max_tokens"
         control={control}
         min={1}
-        max={4096}
+        max={8000}
         step={1}
         defaultValue={265}
       />
