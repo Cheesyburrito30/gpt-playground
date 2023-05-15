@@ -1,25 +1,18 @@
-import {
-  FormControl,
-  FormLabel,
-  Grid,
-  GridItem,
-  Textarea,
-} from '@chakra-ui/react';
+import { FormControl, FormLabel, Grid, GridItem, Textarea } from '@chakra-ui/react';
 import axios from 'axios';
-import { CreateChatCompletionRequest } from 'openai';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FormProvider, useFieldArray, useForm } from 'react-hook-form';
 
 import { ChatGrid, CompletionSettings } from './Components';
 import { ChatFormData } from './types';
 
 const defaultValues: ChatFormData = {
-  systemMessage: 'you are a helpful assistant',
-  model: 'gpt-3.5-turbo',
+  systemMessage: "you are a helpful assistant",
+  model: "gpt-3.5-turbo",
   messages: [
     {
-      role: 'user',
-      content: '',
+      role: "user",
+      content: "",
     },
   ],
   temperature: 0.2,
@@ -31,71 +24,47 @@ const defaultValues: ChatFormData = {
 };
 
 export const App = () => {
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const chatGridItemRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [streamedAIResponse, setStreamedAIResponse] = useState('');
+  const [streamedAIResponse, setStreamedAIResponse] = useState("");
   const formMethods = useForm<ChatFormData>({
     defaultValues,
   });
 
   const { control, handleSubmit } = formMethods;
-  const { fields, append, prepend, remove, update } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control,
-    name: 'messages',
+    name: "messages",
   });
-
-  const onSubmit = async ({ systemMessage, ...data }: ChatFormData) => {
-    setIsLoading(true);
-    data.messages.unshift({ role: 'system', content: systemMessage });
-    append(
-      {
-        role: 'assistant',
-        content: '',
-      },
-      { shouldFocus: false }
-    );
-    const response = await axios.post('http://localhost:3001/chat', data);
-    // const response = await openai.createChatCompletion(sanitizeValues(data));
-    update(fields.length, {
-      role: 'assistant',
-      content: response.data.text,
-    });
-    setIsLoading(false);
-    setStreamedAIResponse('');
-  };
 
   const onStreamedSubmit = async ({ systemMessage, ...data }: ChatFormData) => {
     setIsLoading(true);
-    data.messages.unshift({ role: 'system', content: systemMessage });
+    data.messages.unshift({ role: "system", content: systemMessage });
     append(
       {
-        role: 'assistant',
-        content: '',
+        role: "assistant",
+        content: "",
       },
       { shouldFocus: false }
     );
-    const sse = new EventSource('http://localhost:3001/events');
+    const sse = new EventSource("http://localhost:3001/events");
     sse.onmessage = (event) => {
       setStreamedAIResponse((prev) => prev + JSON.parse(event.data));
     };
-    const response = await axios.post('http://localhost:3001/trigger', data);
-    console.log('chat ended');
+    const response = await axios.post("http://localhost:3001/trigger", data);
+    console.log("chat ended");
     sse.close();
-    setStreamedAIResponse('');
+    setStreamedAIResponse("");
     setIsLoading(false);
   };
 
   const abortChat = async () => {
-    await axios.post('http://localhost:3001/abort');
-    setStreamedAIResponse('');
+    await axios.post("http://localhost:3001/abort");
+    setStreamedAIResponse("");
     setIsLoading(false);
   };
 
   useEffect(() => {
-    if (streamedAIResponse === 'end') {
-      setStreamedAIResponse('');
-    } else if (isLoading && streamedAIResponse.length > 0) {
+    if (isLoading && streamedAIResponse.length > 0) {
       update(fields.length - 1, {
         role: fields[fields.length - 1].role,
         content: streamedAIResponse,
@@ -113,7 +82,7 @@ export const App = () => {
         `}
         templateColumns="25% 60% 15%"
         h="100%"
-        overflow={'hidden'}
+        overflow={"hidden"}
       >
         <GridItem
           area="system"
@@ -122,37 +91,31 @@ export const App = () => {
           borderColor="gray.700"
           bg="gray.700"
           _hover={{
-            bg: 'gray.700',
+            bg: "gray.700",
           }}
           _focusWithin={{
-            bg: 'gray.700',
+            bg: "gray.700",
           }}
         >
           <FormControl display="flex" flexDir="column" h="full">
             <FormLabel>System</FormLabel>
 
             <Textarea
-              {...formMethods.register('systemMessage')}
+              {...formMethods.register("systemMessage")}
               border="none"
               resize="none"
               h="100%"
               bg="gray.800"
               _hover={{
-                bg: 'gray.800',
+                bg: "gray.800",
               }}
               _focus={{
-                bg: 'gray.800',
+                bg: "gray.800",
               }}
             />
           </FormControl>
         </GridItem>
-        <GridItem
-          area="chat"
-          h="100%"
-          ref={chatGridItemRef}
-          position="relative"
-          bottom={0}
-        >
+        <GridItem area="chat" h="100%" position="relative" bottom={0}>
           <ChatGrid
             fields={fields}
             remove={remove}
@@ -174,23 +137,3 @@ export const App = () => {
     </FormProvider>
   );
 };
-
-function sanitizeValues({
-  temperature,
-  max_tokens,
-  top_p,
-  frequency_penalty,
-  presence_penalty,
-  n,
-  ...rest
-}: CreateChatCompletionRequest): CreateChatCompletionRequest {
-  return {
-    ...rest,
-    temperature: parseFloat(`${temperature}`),
-    max_tokens: parseInt(`${max_tokens}`, 10),
-    top_p: parseFloat(`${top_p}`),
-    frequency_penalty: parseFloat(`${frequency_penalty}`),
-    presence_penalty: parseFloat(`${presence_penalty}`),
-    n: parseInt(`${n}`, 10),
-  };
-}
