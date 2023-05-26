@@ -1,6 +1,6 @@
 import { FormControl, FormLabel, Grid, GridItem, Textarea } from '@chakra-ui/react';
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormProvider, useFieldArray, useForm } from 'react-hook-form';
 
 import { ChatGrid, CompletionSettings } from './Components';
@@ -24,6 +24,7 @@ const defaultValues: ChatFormData = {
 };
 
 export const App = () => {
+  const chatAreaRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [streamedAIResponse, setStreamedAIResponse] = useState("");
   const formMethods = useForm<ChatFormData>({
@@ -34,6 +35,7 @@ export const App = () => {
   const { fields, append, remove, update } = useFieldArray({
     control,
     name: "messages",
+    shouldUnregister: false,
   });
 
   const onStreamedSubmit = async ({ systemMessage, ...data }: ChatFormData) => {
@@ -115,7 +117,13 @@ export const App = () => {
             />
           </FormControl>
         </GridItem>
-        <GridItem area="chat" h="100%" position="relative" bottom={0}>
+        <GridItem
+          area="chat"
+          h="100%"
+          position="relative"
+          bottom={0}
+          data-testid="chat-area"
+        >
           <ChatGrid
             fields={fields}
             remove={remove}

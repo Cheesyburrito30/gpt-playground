@@ -13,7 +13,7 @@ import {
   VisuallyHidden,
   VStack,
 } from '@chakra-ui/react';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Controller, FieldArrayWithId, UseFieldArrayAppend, UseFieldArrayRemove, useFormContext } from 'react-hook-form';
 
 import { ChatFormData } from '../types';
@@ -34,21 +34,26 @@ export const ChatGrid = ({
   remove,
   append,
 }: ChatGridProps) => {
-  const { register, control } = useFormContext<ChatFormData>();
+  const chatAreaRef = useRef<HTMLDivElement>(null);
+  const { control } = useFormContext<ChatFormData>();
   const removeChildMessages = useCallback(
     (index: number) => {
       const indicesToRemove = Array.from(
         { length: fields.length - index - 1 },
         (_, i) => i + index + 1
       );
-      console.log(indicesToRemove);
       remove(indicesToRemove);
     },
     [fields, remove]
   );
+  useEffect(() => {
+    if (isLoading && chatAreaRef.current) {
+      chatAreaRef.current.scrollTop = chatAreaRef.current?.scrollHeight;
+    }
+  }, [isLoading, fields]);
   return (
     <>
-      <Box w="full" h="calc(100vh - 136px)" overflowY="auto">
+      <Box w="full" h="calc(100vh - 136px)" overflowY="auto" ref={chatAreaRef}>
         <VStack spacing={0} position="sticky" bottom={0}>
           {fields.map((field, index) => (
             <Grid

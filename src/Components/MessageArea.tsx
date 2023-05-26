@@ -21,6 +21,8 @@ import {
   useClipboard,
   VisuallyHidden,
 } from '@chakra-ui/react';
+import { debounce } from 'lodash';
+import { memo, useCallback } from 'react';
 import { FieldArrayWithId, useFormContext } from 'react-hook-form';
 import { CodeComponent } from 'react-markdown/lib/ast-to-react';
 import { ReactMarkdown } from 'react-markdown/lib/react-markdown';
@@ -32,14 +34,24 @@ import { ChatFormData } from '../types';
 import { ResizableTextarea } from './ResizeableTextarea';
 
 export interface MessageAreaProps {
-  field: FieldArrayWithId<ChatFormData, 'messages', 'id'>;
+  field: FieldArrayWithId<ChatFormData, "messages", "id">;
   index: number;
 }
 
-export const MessageArea = ({ field, index }: MessageAreaProps) => {
-  const { register } = useFormContext<ChatFormData>();
+export const MessageArea = memo(({ field, index }: MessageAreaProps) => {
+  const { register, setValue } = useFormContext<ChatFormData>();
+  const debouncedOnChange = useCallback(
+    debounce((value: string) => {
+      setValue(`messages.${index}.content`, value);
+    }, 300),
+    [setValue, index]
+  );
 
-  if (field.role === 'assistant') {
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    debouncedOnChange(event.target.value);
+  };
+
+  if (field.role === "assistant") {
     return (
       <Box px={4}>
         <ReactMarkdown
@@ -93,52 +105,50 @@ export const MessageArea = ({ field, index }: MessageAreaProps) => {
       </VisuallyHidden>
       <ResizableTextarea
         {...register(`messages.${index}.content`)}
+        onChange={handleInputChange}
         placeholder="Message"
         border="none"
         resize="none"
       />
     </FormControl>
   );
-};
+});
 
-const CodeBox: CodeComponent = ({
-  node,
-  inline,
-  className,
-  children,
-  ...props
-}) => {
-  const match = /language-(\w+)/.exec(className || '');
-  const { onCopy } = useClipboard(String(children));
-  return !inline && match ? (
-    <Box position="relative">
-      <IconButton
-        aria-label="Copy code"
-        position="absolute"
-        top={3}
-        right={3}
-        onClick={onCopy}
-        icon={<CopyIcon />}
-        size="sm"
-      />
-      <SyntaxHighlighter
+const CodeBox: CodeComponent = memo(
+  ({ node, inline, className, children, ...props }) => {
+    const match = /language-(\w+)/.exec(className || "");
+    const { onCopy } = useClipboard(String(children));
+    return !inline && match ? (
+      <Box position="relative">
+        <IconButton
+          aria-label="Copy code"
+          position="absolute"
+          top={3}
+          right={3}
+          onClick={onCopy}
+          icon={<CopyIcon />}
+          size="sm"
+        />
+        <SyntaxHighlighter
+          {...props}
+          showLineNumbers
+          children={String(children).replace(/\n$/, "")}
+          style={coldarkDark}
+          language={match[1]}
+          PreTag="div"
+        />
+      </Box>
+    ) : (
+      <Code
         {...props}
-        showLineNumbers
-        children={String(children).replace(/\n$/, '')}
-        style={coldarkDark}
-        language={match[1]}
-        PreTag="div"
-      />
-    </Box>
-  ) : (
-    <Code
-      {...props}
-      className={className}
-      colorScheme="orange"
-      maxW="full"
-      overflowX="auto"
-    >
-      {children}
-    </Code>
-  );
-};
+        className={className}
+        colorScheme="orange"
+        maxW="full"
+        overflowX="auto"
+        mb={-1.5}
+      >
+        {children}
+      </Code>
+    );
+  }
+);
